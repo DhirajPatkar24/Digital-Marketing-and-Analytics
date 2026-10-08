@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Rank and CPC Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tooltip-container { position: relative; display: inline-block; cursor: pointer; }
+        .tooltip-text {
+            visibility: hidden;
+            width: 260px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 50;
+            top: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            border: 1px solid #374151;
+            font-size: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8 flex flex-col justify-between">
+    <div class="max-w-7xl mx-auto space-y-6 w-full">
+        
+        <!-- Header -->
+        <header class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div class="md:col-span-9 space-y-1">
+                    <h1 class="text-2xl md:text-3xl font-bold text-white">Ad Rank and CPC Dashboard</h1>
+                    <p class="text-sm text-indigo-400 font-medium leading-relaxed">An interactive simulator that calculates search ad rankings, positioning, and second-price auction Cost Per Click (CPC) based on maximum bids and quality scores.</p>
+                </div>
+                <div class="md:col-span-3 flex justify-start md:justify-end">
+                    <div class="bg-indigo-900 bg-opacity-40 border border-indigo-500 text-indigo-300 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">
+                        Live Auction Simulator
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Controls Panel -->
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 space-y-6 lg:col-span-1">
+                <h2 class="text-lg font-semibold text-white border-b border-gray-700 pb-3 flex items-center gap-2">
+                    <span>🎛️</span> Auction Parameters
+                </h2>
+
+                <!-- Global Threshold -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-300 flex items-center gap-1.5">
+                        Ad Rank Threshold (₹)
+                        <span class="tooltip-container text-indigo-400 font-bold">ℹ️
+                            <span class="tooltip-text">Minimum Ad Rank required for an ad to be eligible to show in the auction results.</span>
+                        </span>
+                    </label>
+                    <input type="number" id="adThreshold" value="20" min="0" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="space-y-4 pt-2">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Business Inputs</h3>
+                        <button onclick="addBusiness()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1 rounded-lg text-sm transition-colors flex items-center gap-1 shadow-md">
+                            <span>+</span> Add Business
+                        </button>
+                    </div>
+                    
+                    <!-- Dynamic Businesses Container -->
+                    <div id="businessesContainer" class="space-y-4">
+                        <!-- Populated by script -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Table & Analytics -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Table Card -->
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 overflow-visible">
+                    <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <span>📊</span> Auction Results Summary
+                    </h2>
+                    <div class="overflow-x-auto overflow-y-visible">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-gray-700 text-gray-400 text-xs uppercase tracking-wider">
+                                    <th class="py-3 px-4">Business Owner</th>
+                                    <th class="py-3 px-4">
+                                        <span class="flex items-center gap-1">Max Bid
+                                            <span class="tooltip-container text-indigo-400">ℹ️
+                                                <span class="tooltip-text">The maximum amount you are willing to pay for a click on your ad.</span>
+                                            </span>
+                                        </span>
+                                    </th>
+                                    <th class="py-3 px-4">
+                                        <span class="flex items-center gap-1">Quality Score
+                                            <span class="tooltip-container text-indigo-400">ℹ️
+                                                <span class="tooltip-text">Google analyses the quality of your assets (websites, images, text etc.) and determines the score on a scale of 0 to 10</span>
+                                            </span>
+                                        </span>
+                                    </th>
+                                    <th class="py-3 px-4">
+                                        <span class="flex items-center gap-1">Ad Rank
+                                            <span class="tooltip-container text-indigo-400">ℹ️
+                                                <span class="tooltip-text"><strong>Formula:</strong> Max Bid × Quality Score<br>Determines your ad position in the auction.</span>
+                                            </span>
+                                        </span>
+                                    </th>
+                                    <th class="py-3 px-4">
+                                        <span class="flex items-center gap-1">Position
+                                            <span class="tooltip-container text-indigo-400">ℹ️
+                                                <span class="tooltip-text">The place of an Ad in the Google Search Result Page.</span>
+                                            </span>
+                                        </span>
+                                    </th>
+                                    <th class="py-3 px-4">
+                                        <span class="flex items-center gap-1">Cost Per Click
+                                            <span class="tooltip-container text-indigo-400">ℹ️
+                                                <span class="tooltip-text"><strong>Formula:</strong> (Competitor Ad Rank ÷ Your Quality Score) + 0.01<br>The actual amount billed per click.</span>
+                                            </span>
+                                        </span>
+                                    </th>
+                                    <th class="py-3 px-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody" class="divide-y divide-gray-700/50 text-sm">
+                                <!-- Populated dynamically by script -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Charts & Insights Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Chart: Max Bid vs CPC -->
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-300 mb-3">Max Bid vs Cost Per Click (CPC)</h3>
+                            <div class="relative h-60">
+                                <canvas id="bidCpcChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-gray-900 p-3.5 rounded-xl border border-gray-700/60">
+                            <span class="text-xs text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Chart Insight</span>
+                            <p id="chartExplanation" class="text-xs text-gray-300 leading-relaxed">Winners pay just enough to beat the rank below, keeping CPC below Max Bid.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Auction Performance Insights Card -->
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 flex flex-col justify-between">
+                        <h3 class="text-sm font-semibold text-gray-300 mb-4">🏆 Auction Highlights & Insights</h3>
+                        <div class="space-y-4">
+                            <div class="bg-gray-900 p-4 rounded-xl border border-gray-700/60 flex items-center justify-between">
+                                <span class="text-sm text-gray-400">1st Position Winner</span>
+                                <span id="firstPositionWinner" class="text-lg font-bold text-green-500">-</span>
+                            </div>
+                            <div class="bg-gray-900 p-4 rounded-xl border border-gray-700/60 space-y-1">
+                                <span class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">Why 1st Position?</span>
+                                <p id="winnerReason" class="text-xs text-gray-300 leading-relaxed">-</p>
+                            </div>
+                            <div class="bg-gray-900 p-4 rounded-xl border border-gray-700/60 flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Average Cost Per Click (CPC)</span>
+                                <span id="averageCpc" class="text-lg font-bold text-indigo-400">₹0.00</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-4">*Calculated dynamically across all eligible listed business owners in the active auction.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto mt-12 py-6 px-6 bg-gray-800 rounded-2xl border border-gray-700 text-center text-sm text-gray-400 flex flex-col sm:flex-row justify-between items-center gap-2 w-full">
+        <span>Created by <span class="text-indigo-400 font-medium">Dhiraj Patkar</span></span>
+        <a href="mailto:patkardhiraj24@gmail.com" class="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+            <span>✉️</span> patkardhiraj24@gmail.com
+        </a>
+    </footer>
+
+    <script>
+        let bidCpcChartInstance = null;
+        let businessesData = [
+            { id: 'Business A', bid: 80, qs: 9 },
+            { id: 'Business B', bid: 21, qs: 7 },
+            { id: 'Business C', bid: 75, qs: 7 }
+        ];
+        let nextBusinessNum = 4;
+
+        function initBusinessesUI() {
+            const container = document.getElementById('businessesContainer');
+            container.innerHTML = '';
+
+            businessesData.forEach((biz, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-gray-900 p-4 rounded-xl border border-gray-700/60 space-y-3 relative";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white text-sm bg-indigo-600 px-2.5 py-1 rounded-lg" id="label_${index}">${biz.id}</span>
+                            <button onclick="editBusinessName(${index})" title="Rename Business" class="text-indigo-400 hover:text-indigo-300 text-xs p-1">✏️</button>
+                        </div>
+                        ${businessesData.length > 1 ? `<button onclick="removeBusiness(${index})" class="text-gray-400 hover:text-rose-400 text-xs font-semibold px-2 py-0.5 rounded transition-colors">Remove</button>` : ''}
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Max Bid (₹)</label>
+                            <input type="number" id="bid_${index}" value="${biz.bid}" min="0" oninput="updateBusinessData(${index})" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Quality Score</label>
+                            <input type="number" id="qs_${index}" value="${biz.qs}" min="0" max="10" oninput="updateBusinessData(${index})" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            runAuction();
+        }
+
+        function editBusinessName(index) {
+            let currentName = businessesData[index].id;
+            let newName = prompt("Enter new name for the business:", currentName);
+            if (newName && newName.trim() !== "") {
+                businessesData[index].id = newName.trim();
+                initBusinessesUI();
+            }
+        }
+
+        function addBusiness() {
+            const newName = `Business ${nextBusinessNum++}`;
+            businessesData.push({ id: newName, bid: 50, qs: 5 });
+            initBusinessesUI();
+        }
+
+        function removeBusiness(index) {
+            businessesData.splice(index, 1);
+            initBusinessesUI();
+        }
+
+        function updateBusinessData(index) {
+            businessesData[index].bid = parseFloat(document.getElementById(`bid_${index}`).value) || 0;
+            businessesData[index].qs = parseFloat(document.getElementById(`qs_${index}`).value) || 0;
+            runAuction();
+        }
+
+        function runAuction() {
+            const threshold = parseFloat(document.getElementById('adThreshold').value) || 0;
+
+            let evaluatedBusinesses = businessesData.map(biz => {
+                return {
+                    name: biz.id,
+                    bid: biz.bid,
+                    qs: biz.qs,
+                    adRank: biz.bid * biz.qs,
+                    eligible: (biz.bid * biz.qs) >= threshold
+                };
+            });
+
+            // Sort by Ad Rank descending for positioning
+            let eligibleBusinesses = evaluatedBusinesses.filter(s => s.eligible).sort((a, b) => b.adRank - a.adRank);
+            let ineligibleBusinesses = evaluatedBusinesses.filter(s => !s.eligible);
+
+            let rankCounter = 1;
+            eligibleBusinesses.forEach(biz => {
+                biz.position = rankCounter++;
+            });
+            ineligibleBusinesses.forEach(biz => {
+                biz.position = '-';
+            });
+
+            // Calculate CPC (Second-price auction logic)
+            evaluatedBusinesses.forEach(biz => {
+                if (!biz.eligible) {
+                    biz.cpc = 0;
+                    return;
+                }
+
+                let currentIndex = eligibleBusinesses.findIndex(s => s.name === biz.name);
+                if (currentIndex < eligibleBusinesses.length - 1) {
+                    let nextBiz = eligibleBusinesses[currentIndex + 1];
+                    biz.cpc = (nextBiz.adRank / biz.qs) + 0.01;
+                } else {
+                    biz.cpc = (threshold / biz.qs) + 0.01;
+                }
+            });
+
+            // Sort all businesses for display: ranked items first (by position ascending), then unranked/ineligible ones
+            evaluatedBusinesses.sort((a, b) => {
+                if (a.position === '-' && b.position === '-') return 0;
+                if (a.position === '-') return 1;
+                if (b.position === '-') return -1;
+                return a.position - b.position;
+            });
+
+            renderTable(evaluatedBusinesses);
+            renderChart(evaluatedBusinesses);
+            updateInsights(eligibleBusinesses);
+        }
+
+        function renderTable(businesses) {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            businesses.forEach(biz => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-700/30 transition-colors";
+
+                let statusBadge = biz.eligible 
+                    ? `<span class="font-bold text-green-500 whitespace-nowrap">Listed</span>`
+                    : `<span class="font-bold text-red-500 whitespace-nowrap">Below Threshold</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-bold text-white">${biz.name}</td>
+                    <td class="py-3 px-4 text-gray-300">₹${biz.bid.toFixed(2)}</td>
+                    <td class="py-3 px-4 text-gray-300">${biz.qs}</td>
+                    <td class="py-3 px-4 text-indigo-400 font-semibold">${biz.adRank.toFixed(1)}</td>
+                    <td class="py-3 px-4 text-gray-300">${biz.position}</td>
+                    <td class="py-3 px-4 text-emerald-400 font-semibold">₹${biz.cpc.toFixed(2)}</td>
+                    <td class="py-3 px-4">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateInsights(eligibleBusinesses) {
+            const winnerEl = document.getElementById('firstPositionWinner');
+            const winnerReasonEl = document.getElementById('winnerReason');
+            const avgCpcEl = document.getElementById('averageCpc');
+            const chartExpEl = document.getElementById('chartExplanation');
+
+            if (eligibleBusinesses.length > 0) {
+                const winner = eligibleBusinesses[0];
+                winnerEl.textContent = winner.name;
+                winnerReasonEl.textContent = `${winner.name} achieved the highest Ad Rank (${winner.adRank.toFixed(1)}) resulting from a Max Bid of ₹${winner.bid.toFixed(2)} and a Quality Score of ${winner.qs}.`;
+                
+                let totalCpc = eligibleBusinesses.reduce((sum, s) => sum + s.cpc, 0);
+                let avgCpc = totalCpc / eligibleBusinesses.length;
+                avgCpcEl.textContent = `₹${avgCpc.toFixed(2)}`;
+
+                chartExpEl.textContent = `Winners pay just enough to beat the rank below, keeping CPC below Max Bid.`;
+            } else {
+                winnerEl.textContent = 'None (All below threshold)';
+                winnerReasonEl.textContent = 'No business met the minimum ad rank threshold requirement.';
+                avgCpcEl.textContent = '₹0.00';
+                chartExpEl.textContent = 'No businesses currently meet the minimum threshold.';
+            }
+        }
+
+        function renderChart(businesses) {
+            const labels = businesses.map(s => s.name);
+            const bidData = businesses.map(s => s.bid);
+            const cpcData = businesses.map(s => s.cpc);
+
+            const bidCpcCtx = document.getElementById('bidCpcChart').getContext('2d');
+            if (bidCpcChartInstance) bidCpcChartInstance.destroy();
+            bidCpcChartInstance = new Chart(bidCpcCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Max Bid (₹)',
+                            data: bidData,
+                            backgroundColor: '#6366f1',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Cost Per Click (₹)',
+                            data: cpcData,
+                            backgroundColor: '#10b981',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#9ca3af', boxWidth: 12 } } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                    }
+                }
+            });
+        }
+
+        // Global threshold listener
+        document.getElementById('adThreshold').addEventListener('input', runAuction);
+
+        // Initial load
+        window.onload = initBusinessesUI;
+    </script>
+</body>
+</html>
